@@ -1,0 +1,181 @@
+<!DOCTYPE html><html lang="fa">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>🚗 ماشین سکه‌ای - نسخه لاکچری جهانی</title>
+  <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet">
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Vazirmatn', sans-serif;
+      background: linear-gradient(135deg, #ffe082, #f48fb1);
+      overflow: hidden;
+      color: #222;
+    }
+    #gameCanvas {
+      background: linear-gradient(to bottom, #bbdefb, #e3f2fd);
+      display: block;
+      margin: 20px auto;
+      border: 6px solid #fff;
+      border-radius: 18px;
+      box-shadow: 0 0 30px #ff4081aa;
+    }
+    .panel {
+      position: fixed;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(255, 255, 255, 0.95);
+      padding: 25px;
+      border-radius: 16px;
+      box-shadow: 0 0 25px #00000055;
+      display: none;
+      z-index: 1000;
+      width: 340px;
+      text-align: center;
+    }
+    input, select, button {
+      margin-top: 10px;
+      padding: 12px;
+      font-size: 16px;
+      border-radius: 10px;
+      border: none;
+      outline: none;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    button {
+      background: linear-gradient(to right, #ec407a, #d81b60);
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+      transition: transform 0.2s ease;
+    }
+    button:hover {
+      transform: scale(1.05);
+    }
+    #logo {
+      font-size: 36px;
+      font-weight: 900;
+      text-align: center;
+      margin-top: 10px;
+      color: #fff;
+      animation: bounce 2s infinite;
+      text-shadow: 0 0 15px #fff, 0 0 30px #f50057;
+    }
+    @keyframes bounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+    }
+    #progressBarContainer {
+      background: #ffebee;
+      border-radius: 10px;
+      margin: 10px auto;
+      width: 90%;
+      height: 22px;
+      box-shadow: inset 0 1px 3px rgba(0,0,0,0.2);
+    }
+    #progressBar {
+      height: 100%;
+      background: linear-gradient(to right, #ef5350, #e53935);
+      border-radius: 10px;
+      width: 0%;
+      transition: width 0.4s ease;
+    }
+  </style>
+</head>
+<body>
+  <div id="logo">🚗 ماشین سکه‌ای - نسخه لاکچری جهانی</div>
+  <canvas id="gameCanvas" width="400" height="600"></canvas>  <div class="panel" id="loginPanel" style="display:block">
+    <h3>ورود با کد لایسنس</h3>
+    <input id="licenseCode" type="text" placeholder="کد لایسنس را وارد کنید">
+    <button onclick="login()">ورود</button>
+    <button onclick="adminLogin()">پنل مدیریت</button>
+  </div>  <div class="panel" id="adminPanel">
+    <h3>ساخت یا شارژ لایسنس</h3>
+    <input id="adminCode" type="text" placeholder="کد لایسنس جدید یا موجود">
+    <input id="duration" type="number" min="1" placeholder="مدت اعتبار (روز)">
+    <select id="tier">
+      <option value="bronze">برنز</option>
+      <option value="silver">نقره</option>
+      <option value="gold">طلا</option>
+    </select>
+    <button onclick="generateOrChargeLicense()">ثبت</button>
+    <div id="adminOutput"></div>
+  </div>  <div class="panel" id="userPanel">
+    <div id="progressBarContainer">
+      <div id="progressBar"></div>
+    </div>
+    <button onclick="logout()">خروج</button>
+  </div><script>
+let licenseCode = "";
+let tier = "bronze";
+const values = { bronze: 2000, silver: 4000, gold: 6000 };
+
+function login() {
+  const code = document.getElementById("licenseCode").value.trim();
+  const licenses = JSON.parse(localStorage.getItem("licenses") || '{}');
+  const license = licenses[code];
+  if (license && Date.now() < license.expires) {
+    licenseCode = code;
+    tier = license.tier;
+    document.getElementById("loginPanel").style.display = "none";
+    document.getElementById("userPanel").style.display = "block";
+    updateProgressBar(license);
+  } else {
+    alert("کد اشتباه یا منقضی شده است");
+  }
+}
+
+function logout() {
+  licenseCode = "";
+  document.getElementById("userPanel").style.display = "none";
+  document.getElementById("loginPanel").style.display = "block";
+}
+
+function updateProgressBar(license) {
+  const daysLeft = Math.floor((license.expires - Date.now()) / 86400000);
+  const totalDays = license.totalDays || 30;
+  const percent = Math.max(0, Math.min(100, (daysLeft / totalDays) * 100));
+  document.getElementById("progressBar").style.width = percent + "%";
+  document.getElementById("progressBar").title = daysLeft + " روز باقی مانده";
+}
+
+function adminLogin() {
+  const pass = prompt("رمز مدیر را وارد کنید:");
+  if (pass === "Ali.dr.N.") {
+    document.getElementById("adminPanel").style.display = "block";
+  } else {
+    alert("رمز اشتباه است");
+  }
+}
+
+function generateOrChargeLicense() {
+  const code = document.getElementById("adminCode").value.trim();
+  const days = parseInt(document.getElementById("duration").value);
+  const tier = document.getElementById("tier").value;
+  const licenses = JSON.parse(localStorage.getItem("licenses") || '{}');
+  const now = Date.now();
+
+  if (!code || isNaN(days) || days < 1) {
+    alert("اطلاعات نادرست");
+    return;
+  }
+
+  if (!licenses[code]) {
+    licenses[code] = {
+      tier,
+      expires: now + days * 86400000,
+      totalDays: days
+    };
+  } else {
+    licenses[code].expires = now + days * 86400000;
+    licenses[code].tier = tier;
+    licenses[code].totalDays = days;
+  }
+
+  localStorage.setItem("licenses", JSON.stringify(licenses));
+  document.getElementById("adminOutput").innerText = `لایسنس ${code} با ${days} روز اعتبار ثبت شد`;
+}
+</script></body>
+</html>
